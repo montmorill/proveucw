@@ -1,0 +1,14 @@
+name = "proveucw"
+version = "0.1.0"
+defaultTargets = ["proveucw"]
+
+[[lean_lib]]
+name = "Proveucw"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[lean_exe]]
+name = "proveucw"
+root = "Main"
