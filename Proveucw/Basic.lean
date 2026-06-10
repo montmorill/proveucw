@@ -11,7 +11,7 @@ instance : OfNat Vertex N where
   ofNat := ⟨some N⟩
 
 instance : ToString Vertex where
-  toString v := match v with
+  toString
     | ⟨none⟩ => "ω"
     | ⟨some index⟩ => s!"{index}"
 
@@ -29,7 +29,7 @@ instance : OfNat Edge N where
   ofNat := ⟨some N⟩
 
 instance : ToString Edge where
-  toString e := match e with
+  toString
     | ⟨none⟩ => "~~"
     | ⟨some lock⟩ => s!"~L({lock})~"
 
@@ -63,14 +63,15 @@ instance : ToString Chain where
     (chain.edges.zipWith (ToString.toString · ++ ToString.toString ·) chain.vertices.tail)
     |>.foldl (· ++ ·) (ToString.toString (chain.head))
 
+@[simp]
 def Chain.append (chain : Chain) (v : Vertex) (e : Edge := ⟨none⟩) : Chain :=
   ⟨chain.vertices ++ [v], chain.edges ++ [e], by simp [chain.valid]⟩
 
+@[simp]
 def Chain.reverse (chain : Chain) : Chain :=
   ⟨chain.vertices.reverse, chain.edges.reverse, by simp [chain.valid]⟩
 
 theorem Chain.reverse_reverse (chain : Chain) : chain.reverse.reverse = chain := by
-  unfold Chain.reverse
   simp
 
 def Chain.concat (a b : Chain) (_ : a.last = b.head) : Chain :=
@@ -90,15 +91,15 @@ def Chain.is_subchain_of' (a b : Chain) : Prop :=
     a.edges = (b.edges.drop start).take a.edges.length
 
 def Chain.is_subchain_of (a b : Chain) : Prop :=
-  Chain.is_subchain_of' a b ∨ Chain.is_subchain_of' a.reverse b
+  a.is_subchain_of' b ∨ a.is_subchain_of' b.reverse
 
 instance : Decidable (Chain.is_subchain_of a b) := by
   unfold Chain.is_subchain_of
   unfold Chain.is_subchain_of'
   infer_instance
 
-notation:65 chain:65 " ~~ " vertex:66 => Chain.append chain vertex
-notation:65 chain:65 " ~L(" lock ")~ " vertex:66 => Chain.append chain vertex lock
+notation:65 chain:65 "~~" vertex:66 => Chain.append chain vertex
+notation:65 chain:65 "~L(" lock ")~" vertex:66 => Chain.append chain vertex lock
 
 instance ChainSetoid : Setoid Chain where
   r a b := a = b ∨ a = b.reverse
@@ -112,7 +113,7 @@ instance ChainSetoid : Setoid Chain where
       rintro a b c (rfl|h₁) (rfl|h₂)
       · left;  rfl
       · right; exact h₂
-      · right; rw [h₁]
+      · right; exact h₁
       · left; rw [h₁, h₂, Chain.reverse_reverse]
   }
 
@@ -147,6 +148,15 @@ deriving DecidableEq
 notation:arg " K(" key ") " => Item.Key key
 notation:arg " K*(" key ") " => Item.KeyOnce key
 
+instance : ToString Item where
+  toString
+    | .Key key => s!"K({key})"
+    | .KeyOnce key => s!"K*({key})"
+
+end Item
+
+section ItemSet
+
 abbrev ItemSet := { x : Multiset Item // x ≠ ∅ }
 
 instance : Singleton Item ItemSet where
@@ -155,12 +165,16 @@ instance : Singleton Item ItemSet where
 instance : Insert Item ItemSet where
   insert item items := ⟨item ::ₘ items, by simp⟩
 
-syntax "‹ " withoutPosition(term " ~ " term),* " ›" : term
+end ItemSet
 
-macro_rules
-  | `(‹ $[$k:term ~ $v:term],* ›) =>
-    `([ $[Sigma.mk $k $v],* ].toAList.toFinmap)
+section ItemMap
 
 abbrev ItemMap := Finmap (fun (_ : Vertex) ↦ ItemSet)
 
-end Item
+syntax "‹" withoutPosition(term "~" term),* "›" : term
+
+macro_rules
+  | `(‹ $[$k:term ~ $v:term],* ›) =>
+    `([ $[Sigma.mk $k $v],* ].toFinmap)
+
+end ItemMap
